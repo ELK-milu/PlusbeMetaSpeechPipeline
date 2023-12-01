@@ -1,0 +1,2 @@
+model_checkpoint_path: "Audio2Face"
+all_model_checkpoint_paths: "Audio2Face"
