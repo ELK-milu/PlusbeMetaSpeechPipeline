@@ -27,14 +27,19 @@ from ctypes import *
 
 class Ws_Param(object):
     # 初始化
-    def __init__(self, WavePath , SavePath,Project_dir):
+    def __init__(self, Wave , SavePath,Project_dir,Index = "demo",WavePath=None):
         self.Project_dir = Project_dir
+        self.Wave = Wave
         self.WavePath = WavePath
+        self.Index = str(Index)
         self.SavePath = SavePath
 
-def audioProcess(wav_path):
+def audioProcess(wav_path,wave=None):
     # 读取wav文件，存入list
-    rate, signal = wavfile.read(wav_path)  # rate：采样率
+    if wave is not None:
+        rate, signal = wavfile.read(wave)
+    else:
+        rate, signal = wavfile.read(wav_path)  # rate：采样率
     # print(len(signal))
     # print('signal:',signal[1000:2000])
     print('rate: ', rate)  # 采样率
@@ -53,7 +58,7 @@ def audioProcess(wav_path):
     rate_kHz = int(rate / 1000)  # 采样率：48kHz
 
     # 分割音频
-    audio_frames = [signal[int(i * frames_step * rate_kHz): 
+    audio_frames = [signal[int(i * frames_step * rate_kHz):
                             int((i * frames_step + chunks_length * 2) * rate_kHz)]
                                 for i in range(audio_frameNum)]
     inputData_array = np.zeros(shape=(1, 32, 64))  # 创建一个空3D数组，该数组(1*32*64)最后需要删除
@@ -106,10 +111,13 @@ def audioProcess(wav_path):
 
     return inputData_array
 
-def OnTake(thisWS):
-    inputData_array = audioProcess(thisWS.WavePath)
-    save_path = os.path.join(thisWS.SavePath, 'demo.npy')
-    np.save(save_path, inputData_array)
+def OnTake(thisWS,_callback=None):
+    inputData_array = audioProcess(thisWS.WavePath,thisWS.Wave)
+    if _callback is not None:
+        _callback(inputData_array)
+    #save_path = os.path.join(thisWS.SavePath, thisWS.Index+'.npy')
+    #np.save(save_path, inputData_array)
+
 
 
 if __name__ == '__main__':

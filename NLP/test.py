@@ -56,7 +56,7 @@ def checklen(text):
         del text[0]
     return text
     
-def OnTake(thisWS):
+def OnTake(thisWS,_OnRecvCallback = None):
     with open(wsParam.SavePath + 'Answer.txt', 'a+', encoding='utf-8') as a:
         a.truncate(0)
     with open(wsParam.SavePath + 'Dialog' + datetime.datetime.now().strftime('%Y-%m-%d') + '.txt','a+',encoding='utf-8') as f:
@@ -65,9 +65,9 @@ def OnTake(thisWS):
         f.write("我:" + text[0]["content"] + '\n')
         SparkApi.answer = ""
         print("星火:", end="")
-        SparkApi.main(appid, api_key, api_secret, Spark_url, domain, question)
+        SparkApi.main(appid, api_key, api_secret, Spark_url, domain, question,_OnRecvCallback)
         getText("assistant", SparkApi.answer)
-        f.write("星火:" + text[0]["content"] + '\n')
+        f.write("星火:" + text[1]["content"] + '\n')
         print(text)
         with open(wsParam.SavePath + 'Answer.txt', 'a+',encoding='utf-8') as a:
             a.write(text[1]["content"] + '\n')

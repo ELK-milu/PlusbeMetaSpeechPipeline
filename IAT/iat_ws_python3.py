@@ -39,6 +39,8 @@ STATUS_FIRST_FRAME = 0  # 第一帧的标识
 STATUS_CONTINUE_FRAME = 1  # 中间帧标识
 STATUS_LAST_FRAME = 2  # 最后一帧的标识
 last_text = ""
+result = ""
+
 
 class Ws_Param(object):
     # 初始化
@@ -91,9 +93,10 @@ class Ws_Param(object):
 # 收到websocket消息的处理
 def on_message(ws, message):
     sid = ""
-    result = ""
     iat_text = ""
+    global result
     global last_text
+    last_text = result
     try:
         code = json.loads(message)["code"]
         sid = json.loads(message)["sid"]
@@ -119,11 +122,10 @@ def on_message(ws, message):
         print(result)
         with open(wsParam.SavePath + 'result.txt', 'w', encoding='utf8') as f2:
             f2.write(last_text)
-            last_text = result
 
 
 
-def OnTake(thisWS):
+def OnTake(thisWS,_callback = None):
     time1 = datetimes.now()
     # 清空文本
     with open(wsParam.SavePath+'demo.json', 'a+', encoding='utf-8') as f:
@@ -137,8 +139,15 @@ def OnTake(thisWS):
     ws = websocket.WebSocketApp(wsUrl, on_message=on_message, on_error=on_error, on_close=on_close)
     ws.on_open = on_open
     ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
+    with open(wsParam.SavePath + 'result.txt', 'a+', encoding='utf8') as f2:
+        f2.write(result)
     time2 = datetimes.now()
     print(time2 - time1)
+    if _callback is not None:
+        try:
+            _callback(last_text+result)
+        except Exception as e:
+            print("IAT OnTake callback Wrong:",e)
 
 
 # 收到websocket错误的处理

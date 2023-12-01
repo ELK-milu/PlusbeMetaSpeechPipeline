@@ -37,12 +37,14 @@ STATUS_LAST_FRAME = 2  # 最后一帧的标识
 
 class Ws_Param(object):
     # 初始化
-    def __init__(self, APPID, APIKey, APISecret, Text,SavePath):
+    def __init__(self, APPID, APIKey, APISecret, Text,SavePath,Index = "demo",OnRecvCallback= None):
         self.APPID = APPID
         self.APIKey = APIKey
         self.APISecret = APISecret
         self.Text = Text
+        self.Index = str(Index)
         self.SavePath = SavePath
+        self.OnRecvCallback = OnRecvCallback
 
         # 公共参数(common)
         self.CommonArgs = {"app_id": self.APPID}
@@ -86,6 +88,10 @@ class Ws_Param(object):
         # print('websocket url :', url)
         return url
 
+    # 定义一个类的回调方法
+    def OnCallback(self,text):
+        self.OnRecvCallback(text)
+
 def on_message(ws, message):
     try:
         message =json.loads(message)
@@ -94,7 +100,6 @@ def on_message(ws, message):
         audio = message["data"]["audio"]
         audio = base64.b64decode(audio)
         status = message["data"]["status"]
-        print(message)
         if status == 2:
             print("ws is closed")
             ws.close()
@@ -102,18 +107,17 @@ def on_message(ws, message):
             errMsg = message["message"]
             print("sid:%s call error:%s code is:%s" % (sid, errMsg, code))
         else:
-
-            with open(wsParam.SavePath + 'demo.pcm', 'ab') as f:
+            with open(wsParam.SavePath + wsParam.Index +'.pcm', 'ab') as f:
                 f.write(audio)
-
     except Exception as e:
         print("receive msg,but parse exception:", e)
 
 # pcm 转 wav
-def pcm2wav(pcm_file, wav_file, channels=1, bits=16, sample_rate=16000):
-    pcmf = open(pcm_file, 'rb')
-    pcmdata = pcmf.read()
-    pcmf.close()
+def pcm2wav(pcm_file, wav_file,pcmdata=None, channels=1, bits=16, sample_rate=16000):
+    if pcmdata is None:
+        pcmf = open(pcm_file, 'rb')
+        pcmdata = pcmf.read()
+        pcmf.close()
 
     if bits % 8 != 0:
         raise ValueError("bits % 8 must == 0. now bits:" + str(bits))
@@ -125,6 +129,12 @@ def pcm2wav(pcm_file, wav_file, channels=1, bits=16, sample_rate=16000):
     wavfile.writeframes(pcmdata)
     wavfile.close()
 
+    if wsParam.OnRecvCallback is not None:
+        try:
+            wsParam.OnCallback(wav_file)
+        except Exception as e:
+            print("tts OnMessage callback wrong:", e)
+
 
 # 收到websocket错误的处理
 def on_error(ws, error):
@@ -134,7 +144,7 @@ def on_error(ws, error):
 # 收到websocket关闭的处理
 def on_close(ws,close_status_code=None,close_msg =None):
     #pcm2wav(wsParam.SavePath + datetimes.now().strftime('%Y-%m-%d %H:%M:%S') + '.pcm',wsParam.SavePath + datetimes.now().strftime('%Y-%m-%d %H:%M:%S') + '.wav')
-    pcm2wav(wsParam.SavePath + 'demo.pcm',wsParam.SavePath + 'demo.wav')
+    pcm2wav(wsParam.SavePath + wsParam.Index + '.pcm',wsParam.SavePath + wsParam.Index + '.wav')
     print("### closed ###")
 
 
@@ -148,8 +158,8 @@ def on_open(ws):
         d = json.dumps(d)
         print("------>开始发送文本数据")
         ws.send(d)
-        if os.path.exists( wsParam.SavePath + 'demo.pcm'):
-            os.remove( wsParam.SavePath + 'demo.pcm')
+        if os.path.exists( wsParam.SavePath + wsParam.Index + '.pcm'):
+            os.remove( wsParam.SavePath +  wsParam.Index + '.pcm')
 
     thread.start_new_thread(run, ())
 
